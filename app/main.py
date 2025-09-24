@@ -1,5 +1,6 @@
 import logging
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers import quiz
 
 # --------------------------
@@ -18,6 +19,25 @@ app = FastAPI(
     description="API para gerar quizzes usando o Gemini LLM.",
     version="1.0.0",
 )
+
+# --------------------------
+# Configuração de CORS
+# --------------------------
+origins = [
+    "http://localhost:3000",  # React dev server
+    "http://127.0.0.1:3000",
+    # Adicione aqui o domínio do frontend em produção, ex:
+    # "https://meuquiz.com"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,         # quem pode acessar
+    allow_credentials=True,
+    allow_methods=["*"],           # libera todos os métodos (GET, POST, etc.)
+    allow_headers=["*"],           # libera todos os headers
+)
+
 
 # --------------------------
 # Registro das rotas
