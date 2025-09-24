@@ -1,85 +1,298 @@
-# QuizAI API
 
-QuizAI é uma API FastAPI para gerar quizzes utilizando a API Gemini LLM. A API permite que você envie um tema e uma dificuldade, e receba um quiz com alternativas e a resposta correta.
+---
 
-## Funcionalidades
-- Gere quizzes informando um tema e dificuldade
-- Retorna uma pergunta, alternativas e a resposta correta
-- Documentação OpenAPI/Swagger bem estruturada para fácil teste
+# 📘 QuizAI API
 
-## Como começar
+QuizAI é uma API construída em **FastAPI** que gera quizzes de múltipla escolha utilizando a **Gemini LLM**.
+Ela foi projetada para **evitar trapaças**: o backend nunca expõe as respostas corretas diretamente ao frontend.
 
-### 1. Instale as dependências
-Certifique-se de ter o FastAPI e o Uvicorn instalados. Se estiver usando um ambiente virtual, ative-o primeiro.
+---
+
+## 🚀 Funcionalidades
+
+* Gera quizzes de múltiplas questões sobre qualquer tema e nível de dificuldade.
+* Retorna apenas perguntas e alternativas, nunca a resposta correta.
+* Permite verificar respostas uma a uma.
+* Disponibiliza o **gabarito completo** somente ao final do quiz.
+* Documentação automática via **Swagger** em `/docs`.
+
+---
+
+## 🛠️ Tecnologias
+
+* [FastAPI](https://fastapi.tiangolo.com/)
+* [httpx](https://www.python-httpx.org/)
+* [python-dotenv](https://pypi.org/project/python-dotenv/)
+* Gemini LLM API (Google)
+
+---
+
+## 📂 Estrutura do projeto
 
 ```
-pip install fastapi uvicorn
+quizai/
+│── app/
+│   ├── __init__.py
+│   ├── main.py           # Ponto de entrada da aplicação
+│   ├── config.py         # Configurações e variáveis de ambiente
+│   ├── models.py         # Modelos Pydantic
+│   ├── storage.py        # Armazenamento temporário dos gabaritos
+│   ├── services/
+│   │   └── gemini.py     # Chamada à API Gemini
+│   └── routers/
+│       └── quiz.py       # Rotas da API
+│
+├── requirements.txt
+├── .env
+└── README.md
 ```
 
-### 2. Execute a API
-A partir da raiz do projeto:
+---
+
+## ⚙️ Configuração
+
+### 1. Clonar o projeto
+
+```bash
+git clone https://github.com/seu-repo/quizai.git
+cd quizai
+```
+
+### 2. Criar ambiente virtual (opcional)
+
+```bash
+python -m venv venv
+source venv/bin/activate   # Linux/Mac
+venv\Scripts\activate      # Windows
+```
+
+### 3. Instalar dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Definir variáveis de ambiente
+
+Crie um arquivo `.env`:
 
 ```
-uvicorn main:app --reload
+GEMINI_API_KEY=sua_chave_aqui
 ```
 
-A API estará disponível em `http://127.0.0.1:8000`.
+### 5. Rodar a API
 
-### 3. Documentação da API
-Acesse `http://127.0.0.1:8000/docs` para a interface interativa do Swagger UI.
-
-## Uso da API
-
-### POST `/generate-quiz`
-Gera um quiz baseado em um tema e dificuldade.
-
-#### Corpo da Requisição
+```bash
+uvicorn app.main:app --reload
 ```
+
+Acesse em:
+👉 `http://127.0.0.1:8000/docs` (Swagger UI)
+👉 `http://127.0.0.1:8000/redoc` (ReDoc)
+
+---
+
+## 🔌 Endpoints
+
+### 1. **Gerar quiz**
+
+`POST /quiz/generate`
+
+Gera um quiz com múltiplas questões (mínimo 3, máximo 12).
+
+#### Corpo da requisição
+
+```json
 {
-  "topic": "string",        // O tema do quiz
-  "difficulty": "string"    // Dificuldade: easy, medium ou hard
+  "topic": "Programação em Python",
+  "difficulty": "medium",
+  "num_questions": 5
 }
 ```
 
 #### Resposta
-```
+
+```json
 {
-  "question": "string",
-  "alternatives": [
-    { "text": "string" },
-    ...
-  ],
-  "correct_answer": "string"
+  "quiz_id": "a4c3c5e0-b8d3-4f21-9d5c-34bb85c5d91f",
+  "questions": [
+    {
+      "id": 1,
+      "question": "Qual destas opções é uma estrutura de dados em Python?",
+      "alternatives": [
+        {"text": "Array"},
+        {"text": "Tuple"},
+        {"text": "Struct"},
+        {"text": "Class"}
+      ]
+    }
+  ]
 }
 ```
+
+⚠️ Não há `correct_answer` na resposta.
+
+---
+
+### 2. **Responder questão**
+
+`POST /quiz/answer`
+
+Verifica se a resposta do usuário está correta.
+
+#### Corpo da requisição
+
+```json
+{
+  "quiz_id": "a4c3c5e0-b8d3-4f21-9d5c-34bb85c5d91f",
+  "question_id": 1,
+  "selected_answer": "Tuple"
+}
+```
+
+#### Resposta
+
+```json
+{
+  "correct": true
+}
+```
+
+---
+
+### 3. **Gabarito completo**
+
+`GET /quiz/answers/{quiz_id}`
+
+Retorna todas as respostas corretas de um quiz específico (apenas no final).
 
 #### Exemplo
-Requisição:
+
 ```
+GET /quiz/answers/a4c3c5e0-b8d3-4f21-9d5c-34bb85c5d91f
+```
+
+#### Resposta
+
+```json
 {
-  "topic": "Programação em Python",
-  "difficulty": "easy"
+  "quiz_id": "a4c3c5e0-b8d3-4f21-9d5c-34bb85c5d91f",
+  "correct_answers": {
+    "1": "Tuple",
+    "2": "List",
+    "3": "Dictionary",
+    "4": "Set",
+    "5": "Class"
+  }
 }
 ```
 
-Resposta:
-```
-{
-  "question": "Qual é um fato importante sobre Programação em Python?",
-  "alternatives": [
-    { "text": "Alternativa 1" },
-    { "text": "Alternativa 2" },
-    { "text": "Alternativa 3" },
-    { "text": "Alternativa 4" }
-  ],
-  "correct_answer": "Alternativa 2"
+---
+
+## 🔒 Segurança
+
+* O **gabarito nunca é enviado junto com as perguntas**.
+* As respostas corretas ficam armazenadas apenas no backend (`QUIZ_STORAGE`).
+* Somente no final do quiz o gabarito pode ser solicitado pelo cliente.
+
+---
+
+## ⚛️ Exemplo de fluxo em React
+
+Um fluxo simples em React usando **fetch**:
+
+```jsx
+import React, { useState } from "react";
+
+function QuizApp() {
+  const [quiz, setQuiz] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const [answers, setAnswers] = useState({});
+
+  // 1. Gerar quiz
+  const startQuiz = async () => {
+    const res = await fetch("http://127.0.0.1:8000/quiz/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: "Programação em Python",
+        difficulty: "medium",
+        num_questions: 3,
+      }),
+    });
+    const data = await res.json();
+    setQuiz(data);
+    setCurrentQuestion(0);
+    setScore(0);
+    setFinished(false);
+    setAnswers({});
+  };
+
+  // 2. Responder questão
+  const answerQuestion = async (selected) => {
+    const res = await fetch("http://127.0.0.1:8000/quiz/answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quiz_id: quiz.quiz_id,
+        question_id: quiz.questions[currentQuestion].id,
+        selected_answer: selected,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.correct) {
+      setScore((prev) => prev + 1);
+    }
+    setAnswers((prev) => ({
+      ...prev,
+      [quiz.questions[currentQuestion].id]: selected,
+    }));
+
+    if (currentQuestion + 1 < quiz.questions.length) {
+      setCurrentQuestion((prev) => prev + 1);
+    } else {
+      setFinished(true);
+    }
+  };
+
+  // 3. Buscar gabarito ao final
+  const getResults = async () => {
+    const res = await fetch(`http://127.0.0.1:8000/quiz/answers/${quiz.quiz_id}`);
+    const data = await res.json();
+    console.log("Gabarito:", data.correct_answers);
+    alert(`Você acertou ${score} de ${quiz.questions.length}`);
+  };
+
+  if (!quiz) return <button onClick={startQuiz}>Iniciar Quiz</button>;
+
+  if (finished)
+    return (
+      <div>
+        <h2>Quiz finalizado!</h2>
+        <p>Você acertou {score} de {quiz.questions.length}</p>
+        <button onClick={getResults}>Ver gabarito</button>
+      </div>
+    );
+
+  const q = quiz.questions[currentQuestion];
+
+  return (
+    <div>
+      <h2>{q.question}</h2>
+      {q.alternatives.map((alt, idx) => (
+        <button key={idx} onClick={() => answerQuestion(alt.text)}>
+          {alt.text}
+        </button>
+      ))}
+    </div>
+  );
 }
+
+export default QuizApp;
 ```
 
-## Integração com Gemini LLM
-- A implementação atual já utiliza a Gemini para gerar quizzes.
-- Certifique-se de definir a variável de ambiente `GEMINI_API_KEY` com sua chave Gemini.
-- A resposta segue o modelo `QuizResponse`.
+---
 
-## Licença
-MIT
