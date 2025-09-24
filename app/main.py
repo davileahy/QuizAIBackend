@@ -26,6 +26,9 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",  # React dev server
     "http://127.0.0.1:3000",
+    "http://localhost:5173",  # React vite dev server
+    "http://127.0.0.1:5173",
+    
     # Adicione aqui o domínio do frontend em produção, ex:
     # "https://meuquiz.com"
 ]
